@@ -1,0 +1,78 @@
+ext {
+    playVersion = '2.5.15'
+    junitVersion = "4.12"
+}
+
+allprojects {
+    apply plugin: 'idea'
+    repositories {
+        jcenter()
+        maven {
+            name "typesafe-maven-release"
+            url "https://repo.typesafe.com/typesafe/maven-releases"
+        }
+        ivy {
+            name "typesafe-ivy-release"
+            url "https://repo.typesafe.com/typesafe/ivy-releases"
+            layout "ivy"
+        }
+    }
+
+    tasks.withType(Test) {
+        testLogging {
+            events "standardOut", "started", "passed", "skipped", "failed"
+        }
+    }
+}
+
+project(':util') {
+    apply plugin: 'java'
+
+    dependencies {
+        testCompile "junit:junit:${junitVersion}"
+    }
+}
+
+project(':web') {
+    apply plugin: 'java'
+    apply plugin: 'scala'
+    apply plugin: 'play'
+
+    model {
+        components {
+            play {
+                platform play: "${playVersion}", scala: '2.11', java: '1.8'
+                injectedRoutesGenerator = true
+            }
+        }
+    }
+
+
+    dependencies {
+        play project(":util")
+        play "org.slf4j:slf4j-simple:1.7.21"
+        playTest "junit:junit:${junitVersion}"
+        playTest "com.typesafe.play:play-test_2.11:${playVersion}"
+        compile 'org.scala-lang:scala-library:2.11.11'
+    }
+
+
+    idea {
+        module {
+            sourceDirs += file("app")
+            sourceDirs += file("conf")
+            testSourceDirs += file("test")
+
+            sourceDirs += file("$buildDir.name/src/play/binary/routesScalaSources")
+        }
+    }
+    afterEvaluate {
+        idea {
+            module {
+                scopes.COMPILE = [plus: [configurations.play], minus: []]
+                scopes.RUNTIME = [plus: [configurations.playRun], minus: [configurations.play]]
+                scopes.TEST = [plus: [configurations.playTest], minus: [configurations.playRun]]
+            }
+        }
+    }
+}
